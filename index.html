@@ -82,9 +82,10 @@ document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
 
     if (this.checked) {
       const layer = new L.GPX(file, {
-        async: true,
-        polyline_options: { weight: 4, color: "#0066ff" }
-      })
+  async: true,
+  parseElements: ['trk'],   // ONLY raw GPS track
+  polyline_options: { weight: 4, color: "#0066ff" }
+})
       .on("loaded", e => {
         map.fitBounds(e.target.getBounds(), { padding: [20, 20] });
       })
