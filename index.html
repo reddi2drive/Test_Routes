@@ -29,7 +29,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-gpx/gpx.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-gpx@1.7.0/gpx.min.js"></script>
 
 <script>
   // ✅ Set these to match your repo filenames/structure
@@ -74,43 +74,27 @@
     });
 
   // --- GPX route toggle ---
-  // --- GPX route toggle (bulletproof: prefetch + blob URL + clear errors) ---
 const loadedRoutes = {};
 
 document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-  cb.addEventListener("change", async function () {
+  cb.addEventListener("change", function () {
     const file = this.dataset.route;
-    const url = file; // GPX is in repo root
 
     if (this.checked) {
-      try {
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) throw new Error(`Couldn’t fetch GPX (${res.status})`);
-
-        const gpxText = await res.text();
-        const blob = new Blob([gpxText], { type: "application/gpx+xml" });
-        const blobUrl = URL.createObjectURL(blob);
-
-        const layer = new L.GPX(blobUrl, {
-          async: true,
-          polyline_options: { weight: 4, color: "#0066ff" }
-        })
-        .on("loaded", e => {
-          map.fitBounds(e.target.getBounds(), { padding: [20, 20] });
-          URL.revokeObjectURL(blobUrl);
-        })
-        .on("error", () => {
-          alert("GPX downloaded but failed to parse. The GPX file may not be valid GPX.");
-          this.checked = false;
-          URL.revokeObjectURL(blobUrl);
-        });
-
-        loadedRoutes[file] = layer.addTo(map);
-
-      } catch (err) {
-        alert(`Route didn’t load.\n\nFile: ${url}\nReason: ${err.message}\n\nCheck the GPX filename on GitHub matches data-route EXACTLY.`);
+      const layer = new L.GPX(file, {
+        async: true,
+        polyline_options: { weight: 4, color: "#0066ff" }
+      })
+      .on("loaded", e => {
+        map.fitBounds(e.target.getBounds(), { padding: [20, 20] });
+      })
+      .on("error", () => {
+        alert("GPX failed to load – check the file is valid GPX.");
         this.checked = false;
-      }
+      });
+
+      loadedRoutes[file] = layer.addTo(map);
+
     } else {
       if (loadedRoutes[file]) {
         map.removeLayer(loadedRoutes[file]);
