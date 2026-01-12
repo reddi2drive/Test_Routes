@@ -83,7 +83,7 @@ document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     if (this.checked) {
       const layer = new L.GPX(file, {
   async: true,
-  parseElements: ['trk'],   // ONLY raw GPS track
+  parseElements: ['track'],   // ONLY raw GPS track
   polyline_options: { weight: 4, color: "#0066ff" }
 })
       .on("loaded", e => {
