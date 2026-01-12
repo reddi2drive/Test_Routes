@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reddi2Drive – Redditch Test Routes (Rotate)</title>
+
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <style>
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    header { padding: 10px 12px; background:#111; color:#fff; font-weight:700; }
+    .controls { padding:10px 12px; background:#f4f4f4; border-bottom:1px solid #ddd; }
+    #map { height: calc(100vh - 106px); width:100%; }
+    label { display:block; padding:6px 0; }
+    .hint { font-size: 12px; color:#555; margin-top:6px; }
+  </style>
+</head>
+
+<body>
+  <header>Reddi2Drive – Redditch Test Routes (Two-finger rotate)</header>
+
+  <div class="controls">
+    <label><input type="checkbox" data-route="redditchroute1.gpx"> Redditch Route 1</label>
+    <label><input type="checkbox" data-route="redditchroute2.gpx"> Redditch Route 2</label>
+    <div class="hint">Two fingers to rotate • Two fingers to zoom • One finger to pan</div>
+  </div>
+
+  <div id="map"></div>
+
+<script>
+  // =====================
+  // Hotspots (tap to open Patreon)
+  // =====================
+  const HOTSPOTS = [
+    {
+      id: "dunelm-other-road",
+      name: "Dunelm / Other Road",
+      lat: 52.3068756,
+      lng: -1.9349724,
+      url: "https://www.patreon.com/posts/139206388?collection=1674521",
+      routes: ["redditchroute2.gpx"]
+    }
+  ];
+
+  const hotspotMarkers = {}; // id -> maplibregl.Marker
+
+  function showHotspotsForRoute(routeFile) {
+    HOTSPOTS.forEach(h => {
+      if (h.routes && !h.routes.includes(routeFile)) return;
+      if (hotspotMarkers[h.id]) return;
+
+      const el = document.createElement("div");
+      el.style.width = "14px";
+      el.style.height = "14px";
+      el.style.borderRadius = "50%";
+      el.style.background = "#ff3b30";
+      el.style.border = "2px solid #fff";
+      el.style.boxShadow = "0 1px 6px rgba(0,0,0,.35)";
+      el.style.cursor = "pointer";
+
+      const marker = new maplibregl.Marker(el)
+        .setLngLat([h.lng, h.lat])
+        .setPopup(
+          new maplibregl.Popup({ offset: 18 }).setHTML(`
+            <strong>${h.name}</strong><br>
+            <a href="${h.url}" target="_blank" rel="noopener">Watch on Patreon</a>
+          `)
+        )
+        .addTo(map);
+
+      hotspotMarkers[h.id] = marker;
+    });
+  }
+
+  function hideHotspotsForRoute(routeFile) {
+    HOTSPOTS.forEach(h => {
+      if (!h.routes || !h.routes.includes(routeFile)) return;
+      if (!hotspotMarkers[h.id]) return;
+      hotspotMarkers[h.id].remove();
+      delete hotspotMarkers[h.id];
+    });
+  }
+
+  // =====================
+  // Map setup
+  // =====================
+  const BOX_FILE = "redditch.box";
+  const GPX_BASE_PATH = ""; // "" if GPX files are in repo root, or "routes/" if in /routes/
+
+  const REDDITCH_CENTER = [-1.945, 52.306]; // [lng, lat]
+  const REDDITCH_ZOOM = 13;
+
+  // OpenStreetMap road tiles
+  const OSM_RASTER_STYLE = {
+    "version": 8,
+    "sources": {
+      "osm": {
+        "type": "raster",
+        "tiles": [
+          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        ],
+        "tileSize": 256,
+        "attribution": "© OpenStreetMap contributors"
+      }
+    },
+    "layers": [
+      { "id": "osm", "type": "raster", "source": "osm" }
+    ]
+  };
+
+  const map = new maplibregl.Map({
+    container: "map",
+    style: OSM_RASTER_STYLE,
+    center: REDDITCH_CENTER,
+    zoom: REDDITCH_ZOOM,
+    bearing: 0,
+    pitch: 0,
+    dragRotate: true,
+    touchZoomRotate: true,
+    maxZoom: 19
+  });
+
+  map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+
+  function fitToLngLatBounds(bounds, padding = 30) {
+    map.fitBounds(bounds, { padding, duration: 600 });
+  }
+
+  function boxToPolygonGeoJSON(swLat, swLng, neLat, neLng) {
+    const minLng = swLng, minLat = swLat, maxLng = neLng, maxLat = neLat;
+    return {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [minLng, minLat],
+          [maxLng, minLat],
+          [maxLng, maxLat],
+          [minLng, maxLat],
+          [minLng, minLat]
+        ]]
+      }
+    };
+  }
+
+  function parseGPXTracksToGeoJSON(gpxText) {
+    // ONLY raw GPS track points (<trkpt>) – ignores planned routes (<rte>) & waypoints (<wpt>)
+    const xml = new DOMParser().parseFromString(gpxText, "text/xml");
+    const trksegs = Array.from(xml.getElementsByTagName("trkseg"));
+
+    const lines = [];
+    for (const seg of trksegs) {
+      const pts = Array.from(seg.getElementsByTagName("trkpt"))
+        .map(pt => {
+          const lat = Number(pt.getAttribute("lat"));
+          const lon = Number(pt.getAttribute("lon"));
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+          return [lon, lat]; // [lng,lat]
+        })
+        .filter(Boolean);
+
+      if (pts.length >= 2) lines.push(pts);
+    }
+
+    if (lines.length === 0) throw new Error("No <trkpt> points found in GPX (raw track).");
+
+    const geom = (lines.length === 1)
+      ? { type: "LineString", coordinates: lines[0] }
+      : { type: "MultiLineString", coordinates: lines };
+
+    return { type: "Feature", properties: {}, geometry: geom };
+  }
+
+  function boundsFromLineCoords(geom) {
+    let coords = [];
+    if (geom.type === "LineString") coords = geom.coordinates;
+    if (geom.type === "MultiLineString") coords = geom.coordinates.flat();
+
+    let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+    coords.forEach(([lng, lat]) => {
+      if (lng < minLng) minLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lng > maxLng) maxLng = lng;
+      if (lat > maxLat) maxLat = lat;
+    });
+    return [[minLng, minLat], [maxLng, maxLat]];
+  }
+
+  async function loadAndDrawBox() {
+    const res = await fetch(BOX_FILE, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Box file not found: ${BOX_FILE}`);
+
+    const text = (await res.text()).trim();
+    const nums = text.split(/[\s,]+/).map(Number).filter(n => Number.isFinite(n));
+    if (nums.length !== 4) throw new Error("Box file must contain 4 numbers: swLat swLng neLat neLng");
+
+    const [swLat, swLng, neLat, neLng] = nums;
+    const feature = boxToPolygonGeoJSON(swLat, swLng, neLat, neLng);
+    const bounds = [[swLng, swLat], [neLng, neLat]];
+
+    if (!map.getSource("redditch-box")) {
+      map.addSource("redditch-box", { type: "geojson", data: feature });
+
+      map.addLayer({
+        id: "redditch-box-fill",
+        type: "fill",
+        source: "redditch-box",
+        paint: { "fill-color": "#ff0000", "fill-opacity": 0.08 }
+      });
+
+      map.addLayer({
+        id: "redditch-box-line",
+        type: "line",
+        source: "redditch-box",
+        paint: { "line-color": "#ff0000", "line-width": 2 }
+      });
+    } else {
+      map.getSource("redditch-box").setData(feature);
+    }
+
+    fitToLngLatBounds(bounds, 30);
+  }
+
+  const routes = {}; // filename -> {sourceId, lineId}
+
+  async function addRoute(filename) {
+    const url = GPX_BASE_PATH + filename;
+
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Couldn’t fetch GPX (${res.status}): ${url}`);
+
+    const gpxText = await res.text();
+    const feature = parseGPXTracksToGeoJSON(gpxText);
+
+    const sourceId = `route-src-${filename}`;
+    const lineId   = `route-line-${filename}`;
+
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, { type: "geojson", data: feature });
+
+      map.addLayer({
+        id: lineId,
+        type: "line",
+        source: sourceId,
+        paint: { "line-color": "#0066ff", "line-width": 4 }
+      });
+    } else {
+      map.getSource(sourceId).setData(feature);
+    }
+
+    routes[filename] = { sourceId, lineId };
+
+    const bounds = boundsFromLineCoords(feature.geometry);
+    fitToLngLatBounds(bounds, 40);
+  }
+
+  function removeRoute(filename) {
+    const st = routes[filename];
+    if (!st) return;
+    if (map.getLayer(st.lineId)) map.removeLayer(st.lineId);
+    if (map.getSource(st.sourceId)) map.removeSource(st.sourceId);
+    delete routes[filename];
+  }
+
+  map.on("load", async () => {
+    try { await loadAndDrawBox(); } catch (e) { console.error(e); }
+
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener("change", async function () {
+        const file = this.dataset.route;
+
+        if (this.checked) {
+          try {
+            await addRoute(file);
+            showHotspotsForRoute(file);
+          } catch (e) {
+            console.error(e);
+            alert("Route didn’t load:\n\n" + e.message);
+            this.checked = false;
+          }
+        } else {
+          removeRoute(file);
+          hideHotspotsForRoute(file);
+        }
+      });
+    });
+  });
+</script>
+</body>
+</html>
