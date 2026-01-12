@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reddi2Drive – Redditch Test Routes</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+  <style>
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    header { padding: 10px 12px; background:#111; color:#fff; font-weight:700; }
+    .controls { padding:10px 12px; background:#f4f4f4; border-bottom:1px solid #ddd; }
+    #map { height: calc(100vh - 106px); width:100%; }
+    label { display:block; padding:6px 0; }
+  </style>
+</head>
+<body>
+
+<header>Reddi2Drive – Redditch Test Routes</header>
+
+<div class="controls">
+  <label>
+    <input type="checkbox" data-route="redditchroute1.gpx">
+    Redditch Route 1
+  </label>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-gpx/gpx.min.js"></script>
+
+<script>
+  // ✅ Set these to match your repo filenames/structure
+  const BOX_FILE = "redditch.box";         // your box file in repo root
+  const GPX_BASE_PATH = "";                // "" if GPX files are in repo root, or "routes/" if inside /routes/
+  // (These coords just make the map open on Redditch immediately)
+  const REDDITCH_CENTER = [52.306, -1.945];
+  const REDDITCH_ZOOM = 13;
+
+  const map = L.map("map").setView(REDDITCH_CENTER, REDDITCH_ZOOM);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors"
+  }).addTo(map);
+
+  // --- Load & draw the Redditch coverage box ---
+  fetch(BOX_FILE)
+    .then(res => {
+      if (!res.ok) throw new Error(`Box file not found: ${BOX_FILE}`);
+      return res.text();
+    })
+    .then(text => {
+      // Accepts "a,b,c,d" or "a b c d" etc
+      const nums = text.trim().split(/[\s,]+/).map(Number).filter(n => Number.isFinite(n));
+      if (nums.length !== 4) throw new Error("Box file must contain 4 numbers: swLat swLng neLat neLng");
+
+      const [swLat, swLng, neLat, neLng] = nums;
+      const bounds = [[swLat, swLng], [neLat, neLng]];
+
+      L.rectangle(bounds, {
+        color: "#ff0000",
+        weight: 2,
+        fillOpacity: 0.06
+      }).addTo(map);
+
+      map.fitBounds(bounds);
+    })
+    .catch(err => {
+      console.error(err);
+      // No alert needed — map still opens on Redditch due to setView()
+    });
+
+  // --- GPX route toggle ---
+  const loadedRoutes = {};
+
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener("change", function () {
+      const file = this.dataset.route;
+      const url = GPX_BASE_PATH + file;
+
+      if (this.checked) {
+        // Prevent double-load if clicked twice quickly
+        if (loadedRoutes[file]) return;
+
+        const gpxLayer = new L.GPX(url, {
+          async: true,
+          marker_options: {
+            startIconUrl: null,
+            endIconUrl: null,
+            shadowUrl: null
+          },
+          polyline_options: {
+            weight: 4,
+            color: "#0066ff"
+          }
+        })
+        .on("loaded", e => {
+          map.fitBounds(e.target.getBounds(), { padding: [20, 20] });
+        })
+        .on("error", () => {
+          alert(
+            "GPX didn't load.\n\n" +
+            "Check the GPX filename matches EXACTLY:\n" +
+            `- In code: ${file}\n` +
+            "- In GitHub: (same name, same case)\n\n" +
+            "Also check whether GPX files are in the root or /routes/.\n" +
+            "If they are in /routes/, set GPX_BASE_PATH = 'routes/'"
+          );
+          this.checked = false;
+          if (loadedRoutes[file]) {
+            map.removeLayer(loadedRoutes[file]);
+            delete loadedRoutes[file];
+          }
+        });
+
+        loadedRoutes[file] = gpxLayer.addTo(map);
+
+      } else {
+        if (loadedRoutes[file]) {
+          map.removeLayer(loadedRoutes[file]);
+          delete loadedRoutes[file];
+        }
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
