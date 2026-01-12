@@ -21,7 +21,7 @@
 
 <div class="controls">
   <label>
-    <input type="checkbox" data-route="Redditch_(Worcestershire)_Car_Route_1(0).gpx">
+    <input type="checkbox" data-route="redditchroute1.gpx">
     Redditch Route 1
   </label>
 </div>
@@ -40,7 +40,7 @@
   }).addTo(map);
 
   // Load your current box file name (redditchbox.txt)
-  fetch('redditchbox.txt')
+  fetch('redditchbox.box')
     .then(r => r.text())
     .then(t => {
       // Accept either "a,b,c,d" or "a, b, c, d" etc.
