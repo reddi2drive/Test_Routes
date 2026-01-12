@@ -83,16 +83,18 @@ document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     if (this.checked) {
       const layer = new L.GPX(file, {
   async: true,
-  parseElements: ['track'],   // ONLY raw GPS track
+  gpx_options: {
+    parseElements: ['track'] // ✅ only <trk> (raw GPS recording)
+  },
   polyline_options: { weight: 4, color: "#0066ff" }
 })
-      .on("loaded", e => {
-        map.fitBounds(e.target.getBounds(), { padding: [20, 20] });
-      })
-      .on("error", () => {
-        alert("GPX failed to load – check the file is valid GPX.");
-        this.checked = false;
-      });
+.on("loaded", e => {
+  map.fitBounds(e.target.getBounds(), { padding: [20, 20] });
+})
+.on("error", () => {
+  alert("GPX failed to load / parse.");
+  this.checked = false;
+});
 
       loadedRoutes[file] = layer.addTo(map);
 
