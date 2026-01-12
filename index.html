@@ -74,58 +74,51 @@
     });
 
   // --- GPX route toggle ---
-  const loadedRoutes = {};
+  // --- GPX route toggle (bulletproof: prefetch + blob URL + clear errors) ---
+const loadedRoutes = {};
 
-  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener("change", function () {
-      const file = this.dataset.route;
-      const url = GPX_BASE_PATH + file;
+document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+  cb.addEventListener("change", async function () {
+    const file = this.dataset.route;
+    const url = file; // GPX is in repo root
 
-      if (this.checked) {
-        // Prevent double-load if clicked twice quickly
-        if (loadedRoutes[file]) return;
+    if (this.checked) {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(`Couldn’t fetch GPX (${res.status})`);
 
-        const gpxLayer = new L.GPX(url, {
+        const gpxText = await res.text();
+        const blob = new Blob([gpxText], { type: "application/gpx+xml" });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const layer = new L.GPX(blobUrl, {
           async: true,
-          marker_options: {
-            startIconUrl: null,
-            endIconUrl: null,
-            shadowUrl: null
-          },
-          polyline_options: {
-            weight: 4,
-            color: "#0066ff"
-          }
+          polyline_options: { weight: 4, color: "#0066ff" }
         })
         .on("loaded", e => {
           map.fitBounds(e.target.getBounds(), { padding: [20, 20] });
+          URL.revokeObjectURL(blobUrl);
         })
         .on("error", () => {
-          alert(
-            "GPX didn't load.\n\n" +
-            "Check the GPX filename matches EXACTLY:\n" +
-            `- In code: ${file}\n` +
-            "- In GitHub: (same name, same case)\n\n" +
-            "Also check whether GPX files are in the root or /routes/.\n" +
-            "If they are in /routes/, set GPX_BASE_PATH = 'routes/'"
-          );
+          alert("GPX downloaded but failed to parse. The GPX file may not be valid GPX.");
           this.checked = false;
-          if (loadedRoutes[file]) {
-            map.removeLayer(loadedRoutes[file]);
-            delete loadedRoutes[file];
-          }
+          URL.revokeObjectURL(blobUrl);
         });
 
-        loadedRoutes[file] = gpxLayer.addTo(map);
+        loadedRoutes[file] = layer.addTo(map);
 
-      } else {
-        if (loadedRoutes[file]) {
-          map.removeLayer(loadedRoutes[file]);
-          delete loadedRoutes[file];
-        }
+      } catch (err) {
+        alert(`Route didn’t load.\n\nFile: ${url}\nReason: ${err.message}\n\nCheck the GPX filename on GitHub matches data-route EXACTLY.`);
+        this.checked = false;
       }
-    });
+    } else {
+      if (loadedRoutes[file]) {
+        map.removeLayer(loadedRoutes[file]);
+        delete loadedRoutes[file];
+      }
+    }
   });
+});
 </script>
 
 </body>
