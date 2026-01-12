@@ -33,6 +33,54 @@
   <div id="map"></div>
 
 <script>
+
+  const HOTSPOTS = [
+  {
+    id: "Dunelm-Other Road",
+    name: "Dunelm-Other Road",
+    lat: 52.3068756,
+    lng: -1.9349724,
+    url: "https://www.patreon.com/posts/139206388?collection=1674521",
+    routes: ["redditchroute2.gpx"]
+  }
+    const hotspotMarkers = {};
+
+function showHotspotsForRoute(routeFile) {
+  HOTSPOTS.forEach(h => {
+    if (h.routes && !h.routes.includes(routeFile)) return;
+    if (hotspotMarkers[h.id]) return;
+
+    const el = document.createElement("div");
+    el.style.width = "14px";
+    el.style.height = "14px";
+    el.style.borderRadius = "50%";
+    el.style.background = "#ff3b30";
+    el.style.border = "2px solid #fff";
+    el.style.boxShadow = "0 1px 6px rgba(0,0,0,.35)";
+
+    const marker = new maplibregl.Marker(el)
+      .setLngLat([h.lng, h.lat])
+      .setPopup(
+        new maplibregl.Popup({ offset: 18 }).setHTML(`
+          <strong>${h.name}</strong><br>
+          <a href="${h.url}" target="_blank">Watch on Patreon</a>
+        `)
+      )
+      .addTo(map);
+
+    hotspotMarkers[h.id] = marker;
+  });
+}
+
+function hideHotspotsForRoute(routeFile) {
+  HOTSPOTS.forEach(h => {
+    if (!h.routes || !h.routes.includes(routeFile)) return;
+    if (!hotspotMarkers[h.id]) return;
+    hotspotMarkers[h.id].remove();
+    delete hotspotMarkers[h.id];
+  });
+}
+];
   // ✅ Set these to match your repo filenames
   const BOX_FILE = "redditch.box";
   const GPX_BASE_PATH = ""; // "" if GPX files are in repo root, or "routes/" if in /routes/
