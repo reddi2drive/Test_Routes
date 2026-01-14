@@ -151,11 +151,40 @@
       color:var(--muted);
       margin-top: 6px;
     }
+    .r2d-header{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+}
+
+.r2d-brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.r2d-logo{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  object-fit:cover;
+  box-shadow:0 0 0 2px rgba(255,255,255,0.15);
+}
+
+.r2d-title{
+  font-size:1.1rem;
+  font-weight:800;
+}
   </style>
 </head>
 
 <body>
-  <header>Reddi2Drive – Redditch Test Routes</header>
+ <header class="r2d-header">
+  <div class="r2d-brand">
+    <img src="reddi2drive-logo.png" alt="Reddi2Drive Logo" class="r2d-logo">
+    <span class="r2d-title">Reddi2Drive – Test Routes</span>
+  </div>
+</header>
 
   <div class="controls">
 
