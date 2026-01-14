@@ -195,23 +195,68 @@
   margin:0 1px;
   color:var(--muted);
 }
+    .r2d-header{
+  display:flex;
+  align-items:center;
+  padding:10px 14px;
+}
+
+.r2d-left{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+}
+
+.r2d-logo{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+}
+
+.r2d-text{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+
+.r2d-title-line{
+  font-size:1.1rem;
+  font-weight:800;
+  line-height:1;
+  white-space:nowrap; /* FORCE single line */
+}
+
+.r2d-tagline{
+  margin-top:2px;      /* moves it DOWN 2px */
+  margin-left:-2px;   /* pulls it LEFT next to logo */
+  font-size:.8rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  color:var(--muted);
+}
   </style>
   
 </head>
 
 <body>
- <header class="r2d-header">
-  <div class="r2d-brand">
-    <img src="reddi2drivelogo.png" alt="Reddi2Drive Logo" class="r2d-logo">
-    <span class="r2d-title">Reddi2Drive – Test Routes</span>
+<header class="r2d-header">
+  <div class="r2d-left">
+    <img src="reddi2drive-logo.png" alt="Reddi2Drive Logo" class="r2d-logo">
+
+    <div class="r2d-text">
+      <div class="r2d-title-line">
+        Reddi<span class="two">2</span>Drive – Test Routes
+      </div>
+
+      <div class="r2d-tagline">
+        <span class="r2d-word learn">Reddi<span class="two">2</span>Learn</span>
+        <span class="dot">|</span>
+        <span class="r2d-word drive">Reddi<span class="two">2</span>Drive</span>
+        <span class="dot">|</span>
+        <span class="r2d-word pass">Reddi<span class="two">2</span>Pass</span>
+      </div>
+    </div>
   </div>
-   <div class="r2d-tagline" aria-label="Reddi2Learn Reddi2Drive Reddi2Pass">
-  <span class="r2d-word learn">Reddi<span class="two">2</span>Learn</span>
-  <span class="dot">|</span>
-  <span class="r2d-word drive">Reddi<span class="two">2</span>Drive</span>
-  <span class="dot">|</span>
-  <span class="r2d-word pass">Reddi<span class="two">2</span>Pass</span>
-</div>
 </header>
 
   <div class="controls">
