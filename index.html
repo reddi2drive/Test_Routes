@@ -175,14 +175,17 @@
   font-size:1.1rem;
   font-weight:800;
 }
-    .r2d-tagline{
-  width:100%;
-  margin-top:4px;
-  text-align:left;
-  font-weight:800;
-  letter-spacing:.08em;
+ .r2d-tagline{
+  margin-top:2px;        /* down 2px */
+  margin-left:-2px;      /* left a touch */
   font-size:.8rem;
+  font-weight:700;
+  letter-spacing:.08em;
   color:var(--muted);
+
+  white-space:nowrap;    /* ✅ keeps it on ONE line */
+  overflow:hidden;
+  text-overflow:ellipsis; /* optional: stops it wrapping if screen is too narrow */
 }
 
 .r2d-word.learn{ color:#e53935; }
@@ -241,7 +244,7 @@
 <body>
 <header class="r2d-header">
   <div class="r2d-left">
-    <img src="reddi2drive-logo.png" alt="Reddi2Drive Logo" class="r2d-logo">
+    <img src="reddi2drivelogo.png" alt="Reddi2Drive Logo" class="r2d-logo">
 
     <div class="r2d-text">
       <div class="r2d-title-line">
